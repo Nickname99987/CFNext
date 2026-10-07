@@ -2,20 +2,38 @@ name: Upstream Sync
 
 on:
   schedule:
-    # 每天 UTC 0 点自动运行，你可以按需修改频率
+    # 每天 UTC 0 点自动运行
     - cron: '0 0 * * *'
-  workflow_dispatch: # 允许你在 Actions 页面手动触发
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   sync_latest_from_upstream:
+    name: Sync latest commits from upstream repo
     runs-on: ubuntu-latest
-    if: github.event.repository.fork # 仅在仓库是 Fork 时运行
+    if: github.event.repository.fork # 仅在 Fork 仓库中运行
+
     steps:
+      # 第 1 步：检出目标仓库（你的 Fork），必须获取完整历史
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 关键：获取全部提交历史，避免 unrelated histories 冲突
+
+      # 第 2 步：执行同步动作
       - name: Sync upstream changes
+        id: sync
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
         with:
           target_sync_branch: main
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          # 根据上游仓库信息填写
-          upstream_sync_branch: main
           upstream_sync_repo: PAICNI/CFNext
+          upstream_sync_branch: main
+          upstream_pull_args: '--allow-unrelated-histories'  # 关键：允许合并不相关历史
+          test_mode: false
+
+      # 第 3 步：同步失败时输出提示
+      - name: Sync failure check
+        if: failure()
+        run: |
+          echo "::error::同步失败。可能原因：上游 workflow 文件变更导致 GitHub 暂停自动同步，请前往仓库首页手动执行 Sync fork。"
+          exit 1
