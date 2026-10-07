@@ -1,0 +1,21 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    # 每天 UTC 0 点自动运行，你可以按需修改频率
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许你在 Actions 页面手动触发
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    if: github.event.repository.fork # 仅在仓库是 Fork 时运行
+    steps:
+      - name: Sync upstream changes
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          target_sync_branch: main
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          # 根据上游仓库信息填写
+          upstream_sync_branch: main
+          upstream_sync_repo: PAICNI/CFNext
